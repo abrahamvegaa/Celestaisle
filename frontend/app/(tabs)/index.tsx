@@ -1,19 +1,78 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, Image, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import LottieView from 'lottie-react-native';
 
 export default function HomeScreen() {
   const [zipcode, setZipcode] = useState('');
   const [budget, setBudget] = useState('');
   const [groceries, setGroceries] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     console.log('Submit pressed:', { zipcode, budget, groceries });
-    router.push('/(tabs)/store-selection');
+    setIsLoading(true);
+    
+    if (groceries.trim()) {
+      try {
+        const groceryList = groceries
+          .split('\n')
+          .map(item => item.trim())
+          .filter(item => item.length > 0);
+        
+        if (groceryList.length > 0) {
+          const budgetValue = budget.trim() === '' ? '0' : budget;
+          const response = await fetch(`http://35.3.105.155:3000/cheapest?items=${groceryList.join(',')}&budget=${budgetValue}`);
+          const data = await response.json();
+          
+          // Handle new response format with cheapest_prices and ai_recommendations
+          const cheapestItems = data.cheapest_prices || data;
+          const aiRecs = data.ai_recommendations || [];
+          
+          setIsLoading(false);
+          router.push({
+            pathname: '/(tabs)/store-selection',
+            params: { 
+              cheapestItems: JSON.stringify(cheapestItems),
+              aiRecommendations: JSON.stringify(aiRecs),
+              zipcode: zipcode
+            }
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching cheapest prices:', error);
+        setIsLoading(false);
+      }
+    }
+    
+    setIsLoading(false);
+    router.push({
+      pathname: '/(tabs)/store-selection',
+      params: { 
+        zipcode: zipcode
+      }
+    });
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <LottieView
+          source={require('@/assets/images/cart-loading.json')}
+          autoPlay
+          loop
+          style={styles.loadingAnimation}
+        />
+        <ThemedText style={styles.loadingText}>
+          Optimizing your grocery store visit...
+        </ThemedText>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -44,7 +103,7 @@ export default function HomeScreen() {
               style={styles.input}
               value={budget}
               onChangeText={setBudget}
-              placeholder="e.g. '50', '100'"
+              placeholder="(Optional) e.g. '50', '100'"
               placeholderTextColor="#a2a9b6"
               keyboardType="numeric"
             />
@@ -77,6 +136,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#dce2e7',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#dce2e7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
+    marginBottom: 10,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#55627b',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
