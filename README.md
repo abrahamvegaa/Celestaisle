@@ -7,10 +7,5 @@ products for their budget and the best route through the store. uses a freewilli
 
 ## stretch goals
 
-allow sorting by more than price, such as organic, halal
+allow sorting by more than three options, such as halal, gluten free
 use store layouts of real grocery stores
-
-functions needed:
-- getStore, getAddress (for arrival page)
-- getList (for recommended list page)
-- getOptions (for recommended list page)
